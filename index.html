@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>年化利率计算器 · 居间好帮手</title>
+<style>
+  :root{
+    --bg:#f4f6fa;
+    --card:#ffffff;
+    --line:#e6eaf2;
+    --txt:#1f2733;
+    --sub:#7b8798;
+    --brand:#1f6feb;
+    --brand-soft:#eaf2ff;
+    --warn:#d9534f;
+    --ok:#2a9d5c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:24px 16px 60px;
+    background:var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    line-height:1.5;
+    position:relative;
+  }
+  /* ---------- 水印 ---------- */
+  /* 浮在内容之上，保证整页（含卡片内部）都能看到；pointer-events:none 不影响操作 */
+  .watermark{
+    position:fixed;inset:0;z-index:9998;pointer-events:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='150'><text x='180' y='82' text-anchor='middle' font-family='Microsoft YaHei,sans-serif' font-size='19' font-weight='700' fill='%232f3d52' fill-opacity='0.09' transform='rotate(-28 180 82)'>公众号：居间好帮手 v:chen_hnar</text></svg>");
+    background-repeat:repeat;
+  }
+  .wm-badge{
+    position:fixed;right:14px;bottom:14px;z-index:9999;
+    font-size:13px;color:#8a94a6;letter-spacing:.5px;
+    background:rgba(255,255,255,.7);border:1px solid var(--line);
+    border-radius:20px;padding:5px 14px;pointer-events:none;
+  }
+  /* ---------- 布局 ---------- */
+  .wrap{position:relative;z-index:1;max-width:920px;margin:0 auto}
+  .head{text-align:center;margin-bottom:20px}
+  .head h1{margin:0 0 6px;font-size:24px;font-weight:700;letter-spacing:1px}
+  .head p{margin:0;color:var(--sub);font-size:13px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(31,39,51,.05);
+  }
+  .card h2{margin:0 0 14px;font-size:15px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:8px}
+  .card h2::before{content:"";width:4px;height:14px;border-radius:2px;background:var(--brand)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  .field label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px}
+  .inp{position:relative;display:flex;align-items:center}
+  .inp input{
+    width:100%;padding:12px 46px 12px 14px;font-size:17px;font-weight:600;
+    border:1px solid var(--line);border-radius:10px;background:#fbfcfe;color:var(--txt);
+    outline:none;transition:.15s;font-family:inherit;
+  }
+  .inp input:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
+  .inp .unit{position:absolute;right:12px;font-size:13px;color:var(--sub);pointer-events:none}
+  .hint{font-size:12px;color:var(--sub);margin-top:6px;min-height:16px}
+  /* ---------- 结果 ---------- */
+  .hero{
+    display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;
+  }
+  .hero .box{
+    border-radius:12px;padding:16px 18px;border:1px solid var(--line);background:#fbfcfe;
+  }
+  .hero .box.primary{background:linear-gradient(135deg,#1f6feb,#4f8ffb);border-color:transparent;color:#fff}
+  .hero .box .k{font-size:12px;opacity:.85;margin-bottom:8px;letter-spacing:.5px}
+  .hero .box .v{font-size:30px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  .hero .box .v small{font-size:15px;font-weight:600;margin-left:3px}
+  .hero .box.primary .k,.hero .box.primary .s{color:#fff}
+  .hero .box .s{font-size:12px;color:var(--sub);margin-top:8px}
+  .hero .box.primary .s{opacity:.85}
+  .rows{border-top:1px dashed var(--line);margin-top:4px}
+  .row{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:11px 2px;border-bottom:1px solid #f0f3f8;font-size:14px;
+  }
+  .row span{color:var(--sub)}
+  .row b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+  .row b.red{color:var(--warn)}
+  .row b.green{color:var(--ok)}
+  .row b.blue{color:var(--brand)}
+  .err{margin-top:12px;color:var(--warn);font-size:13px;display:none;background:#fdecec;border:1px solid #f7c9c7;border-radius:8px;padding:10px 12px}
+  /* ---------- 按钮 ---------- */
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  button{
+    font-family:inherit;font-size:14px;border-radius:9px;padding:10px 18px;cursor:pointer;
+    border:1px solid var(--brand);background:var(--brand);color:#fff;transition:.15s;
+  }
+  button.ghost{background:#fff;color:var(--brand)}
+  button:active{transform:translateY(1px)}
+  /* ---------- 明细表 ---------- */
+  details{margin-top:6px}
+  details summary{cursor:pointer;font-size:14px;color:var(--brand);padding:8px 0;user-select:none}
+  .tblwrap{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid #f0f3f8;white-space:nowrap}
+  th{position:sticky;top:0;background:#f7f9fc;color:var(--sub);font-weight:600;z-index:1}
+  td:first-child,th:first-child{text-align:left}
+  tbody tr:hover{background:#fafcff}
+  tfoot td{font-weight:700;background:#f7f9fc}
+  .foot{text-align:center;color:var(--sub);font-size:12px;margin-top:22px}
+  .note{font-size:12px;color:var(--sub);line-height:1.8;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="watermark"></div>
+
+<div class="wrap">
+  <div class="head">
+    <h1>年化利率计算器</h1>
+    <p>借款总额 · 月还款 · 期限 → 真实年化 / 月利息 / 总利息（IRR 内部收益率法）</p>
+    <p style="margin-top:6px">公众号：居间好帮手 v:chen_hnar</p>
+  </div>
+
+  <!-- 输入 -->
+  <div class="card">
+    <h2>输入借款信息</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="amt">借款总金额</label>
+        <div class="inp"><input id="amt" type="number" inputmode="decimal" value="100000" min="0" step="1000"><i class="unit">元</i></div>
+        <div class="hint" id="h-amt"></div>
+      </div>
+      <div class="field">
+        <label for="pay">每月还款额</label>
+        <div class="inp"><input id="pay" type="number" inputmode="decimal" value="3000" min="0" step="100"><i class="unit">元</i></div>
+        <div class="hint" id="h-pay"></div>
+      </div>
+      <div class="field">
+        <label for="mon">借款期限</label>
+        <div class="inp"><input id="mon" type="number" inputmode="numeric" value="36" min="1" step="1"><i class="unit">期</i></div>
+        <div class="hint" id="h-mon"></div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:6px">
+      <div class="field">
+        <label for="fee">前置费用 / 手续费（选填，一次性收取）</label>
+        <div class="inp"><input id="fee" type="number" inputmode="decimal" value="0" min="0" step="100"><i class="unit">元</i></div>
+        <div class="hint">砍头息、服务费填这里，按实际到手金额算真实年化</div>
+      </div>
+      <div class="field">
+        <label for="extra">每月额外费用（选填，担保费/保险等）</label>
+        <div class="inp"><input id="extra" type="number" inputmode="decimal" value="0" min="0" step="10"><i class="unit">元</i></div>
+        <div class="hint">计入月供一并计算综合成本</div>
+      </div>
+      <div class="field" style="display:flex;align-items:flex-end">
+        <div class="btns" style="margin:0">
+          <button class="ghost" id="reset" type="button" style="border-color:var(--line);color:var(--sub)">重置</button>
+          <button id="copy" type="button">复制结果</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card">
+    <h2>计算结果</h2>
+    <div class="hero">
+      <div class="box primary">
+        <div class="k">综合年化利率（IRR × 12，行业常用口径）</div>
+        <div class="v" id="apr">--<small>%</small></div>
+        <div class="s" id="apr-s">折合月息 -- 分 -- 厘</div>
+      </div>
+      <div class="box">
+        <div class="k">实际年化利率（复利口径 (1+r)¹²−1）</div>
+        <div class="v" id="ear">--<small>%</small></div>
+        <div class="s" id="ear-s">月利率 --%</div>
+      </div>
+    </div>
+
+    <div class="rows">
+      <div class="row"><span>月利息（首月，按剩余本金计息）</span><b class="red" id="m1">--</b></div>
+      <div class="row"><span>月利息（平均，总利息 ÷ 期数）</span><b class="red" id="mavg">--</b></div>
+      <div class="row"><span>总利息</span><b class="red" id="ti">--</b></div>
+      <div class="row"><span>总还款额（月供 × 期数）</span><b id="tp">--</b></div>
+      <div class="row"><span>实际到手金额</span><b class="green" id="net">--</b></div>
+      <div class="row"><span>利息占借款总额比例</span><b class="blue" id="ratio">--</b></div>
+      <div class="row"><span>每借 1 万元，月供约</span><b id="perw">--</b></div>
+    </div>
+
+    <details>
+      <summary>查看还款计划明细（每月本金 / 利息 / 剩余本金）</summary>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>期数</th><th>月供</th><th>其中本金</th><th>其中利息</th><th>剩余本金</th></tr></thead>
+          <tbody id="tb"></tbody>
+          <tfoot><tr><td>合计</td><td id="f-pay">--</td><td id="f-pri">--</td><td id="f-int">--</td><td>—</td></tr></tfoot>
+        </table>
+      </div>
+    </details>
+
+    <div class="note">
+      计算说明：按等额本息模型，用二分法求解方程 <b>本金 = 月供 × [1−(1+r)⁻ⁿ] ÷ r</b> 得到真实月利率 r，再换算年化。<br>
+      「年化利率」采用行业通用的 IRR 口径（月利率 × 12）；「实际年化」为复利口径 (1+r)¹²−1，更接近监管披露标准。
+    </div>
+  </div>
+
+  <div class="foot">公众号：居间好帮手 v:chen_hnar · 结果仅供参考，实际以合同约定为准</div>
+</div>
+
+<div class="wm-badge">公众号：居间好帮手 v:chen_hnar</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var amt = $('amt'), pay = $('pay'), mon = $('mon'), fee = $('fee'), extra = $('extra'), err = $('err');
+
+  function num(el){ var v = parseFloat(el.value); return isFinite(v) ? v : 0; }
+  function money(v){ return (isFinite(v) ? v : 0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function money0(v){ return Math.round(v||0).toLocaleString('zh-CN'); }
+  function pct(v){ return (v*100).toFixed(2); }
+
+  // 求解月利率 r：本金 = pmt * (1-(1+r)^-n)/r
+  function f(r, pmt, n, pv){
+    if (Math.abs(r) < 1e-9) return pmt * n - pv;
+    return pmt * (1 - Math.pow(1+r, -n)) / r - pv;
+  }
+  function solveRate(pv, pmt, n){
+    if (pv <= 0 || pmt <= 0 || n <= 0) return null;
+    var lo = -0.999999, hi = 10; // 月利率搜索区间：-99.99% ~ 1000%
+    var flo = f(lo,pmt,n,pv), fhi = f(hi,pmt,n,pv);
+    if (flo < 0) return lo;
+    if (fhi > 0) return hi;
+    for (var i=0;i<300;i++){
+      var mid = (lo+hi)/2, fm = f(mid,pmt,n,pv);
+      if (fm > 0) lo = mid; else hi = mid;
+    }
+    return (lo+hi)/2;
+  }
+
+  function calc(){
+    err.style.display = 'none';
+    var A = num(amt), P0 = num(pay), N = Math.round(num(mon));
+    var F = Math.max(0, num(fee)), E = Math.max(0, num(extra));
+
+    // 提示
+    $('h-amt').textContent = A > 0 ? (A >= 10000 ? (A/10000).toFixed(2) + ' 万元' : '') : '请输入借款金额';
+    $('h-pay').textContent = P0 > 0 && A > 0 ? '每万元月供 ' + (P0/A*10000).toFixed(2) + ' 元' : '请输入月还款额';
+    $('h-mon').textContent = N > 0 ? (N/12).toFixed(1).replace(/\.0$/,'') + ' 年（' + N + ' 期）' : '请输入期限';
+
+    if (A <= 0 || P0 <= 0 || N <= 0){
+      ['apr','ear','m1','mavg','ti','tp','net','ratio','perw'].forEach(function(id){ $(id).innerHTML = '--'; });
+      $('apr-s').textContent = '折合月息 -- 分 -- 厘';
+      $('ear-s').textContent = '月利率 --%';
+      $('tb').innerHTML = '';
+      return;
+    }
+
+    var netAmt = Math.max(A - F, 0.01);      // 实际到手
+    var pmt = P0 + E;                         // 综合月供
+    var r = solveRate(netAmt, pmt, N);
+
+    if (r === null || r <= -0.99){
+      err.style.display = 'block';
+      err.textContent = '数据异常，无法求解：请检查月还款 × 期数 是否大于实际到手金额。';
+      return;
+    }
+
+    var zero = Math.abs(pmt*N - netAmt) < 1e-6;
+    if (!zero && pmt*N < netAmt){
+      err.style.display = 'block';
+      err.textContent = '提示：总还款 ' + money0(pmt*N) + ' 元 < 实际到手 ' + money0(netAmt) + ' 元，该笔借款实际为负利率（月利率 ' + pct(r) + '%），请核对数据。';
+    }
+
+    var apr = r * 12;                                  // 行业口径
+    var ear = Math.pow(1+r, 12) - 1;                   // 复利口径
+    var totalPay = P0 * N;
+    var totalInterest = totalPay - A;                  // 以合同本金计的利息
+    var firstInterest = A * r;                         // 首月利息
+    var avgInterest = totalInterest / N;
+
+    $('apr').innerHTML = pct(apr) + '<small>%</small>';
+    $('apr-s').textContent = '折合月息 ' + fenli(r);
+    $('ear').innerHTML = pct(ear) + '<small>%</small>';
+    $('ear-s').textContent = '月利率 ' + pct(r) + '%';
+
+    $('m1').textContent   = money(firstInterest) + ' 元';
+    $('mavg').textContent = money(avgInterest) + ' 元';
+    $('ti').textContent   = money(totalInterest) + ' 元';
+    $('tp').textContent   = money(totalPay) + ' 元';
+    $('net').textContent  = money(netAmt) + ' 元';
+    $('ratio').textContent= (A>0 ? (totalInterest/A*100).toFixed(2) : '0.00') + '%';
+    $('perw').textContent = money(P0/A*10000) + ' 元';
+
+    renderTable(A, P0, N, r);
+  }
+
+  function fenli(r){
+    var x = r * 100;                 // 月利率百分数，如 0.5 表示 5 厘
+    var fen = Math.floor(x);
+    var li  = Math.round((x - fen) * 100) / 10;
+    if (li >= 10){ fen += 1; li -= 10; }
+    var s = '';
+    if (fen > 0) s += fen + ' 分 ';
+    s += (Math.round(li*10)/10) + ' 厘';
+    return s;
+  }
+
+  function renderTable(A, P0, N, r){
+    var tb = $('tb'), html = '', bal = A, sumP = 0, sumI = 0, sumPay = 0;
+    var max = N > 240 ? 240 : N;
+    for (var i = 1; i <= max; i++){
+      var interest = bal * r;
+      var principal = P0 - interest;
+      if (i === max && N > max){ principal = bal; interest = P0 - principal; }
+      if (principal > bal) principal = bal;
+      bal = bal - principal;
+      if (bal < 0) bal = 0;
+      sumP += principal; sumI += interest; sumPay += P0;
+      html += '<tr><td>第 ' + i + ' 期</td><td>' + money(P0) + '</td><td>' + money(principal) + '</td><td style="color:#d9534f">' + money(interest) + '</td><td>' + money(bal) + '</td></tr>';
+    }
+    if (N > max) html += '<tr><td colspan="5" style="text-align:center;color:#7b8798">… 中间省略 ' + (N-max) + ' 期 …</td></tr>';
+    tb.innerHTML = html;
+    $('f-pay').textContent = money(sumPay);
+    $('f-pri').textContent = money(sumP);
+    $('f-int').textContent = money(sumI);
+  }
+
+  [amt,pay,mon,fee,extra].forEach(function(el){
+    el.addEventListener('input', calc);
+  });
+
+  $('reset').addEventListener('click', function(){
+    amt.value = ''; pay.value = ''; mon.value = ''; fee.value = 0; extra.value = 0; calc();
+  });
+
+  $('copy').addEventListener('click', function(){
+    var txt =
+      '【年化利率测算】公众号：居间好帮手\n' +
+      '借款总额：' + (num(amt)).toLocaleString('zh-CN') + ' 元\n' +
+      '月还款：' + (num(pay)).toLocaleString('zh-CN') + ' 元 × ' + Math.round(num(mon)) + ' 期\n' +
+      '实际到手：' + $('net').textContent + '\n' +
+      '综合年化利率：' + $('apr').textContent + '\n' +
+      '实际年化利率：' + $('ear').textContent + '\n' +
+      '首月利息：' + $('m1').textContent + '　月均利息：' + $('mavg').textContent + '\n' +
+      '总利息：' + $('ti').textContent + '　总还款：' + $('tp').textContent;
+    var btn = this, old = btn.textContent;
+    var done = function(ok){ btn.textContent = ok ? '已复制 ✓' : '复制失败'; setTimeout(function(){ btn.textContent = old; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){done(true);}, function(){fallback(txt,done);});
+    } else { fallback(txt,done); }
+  });
+
+  function fallback(txt, cb){
+    var ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { cb(document.execCommand('copy')); } catch(e){ cb(false); }
+    document.body.removeChild(ta);
+  }
+
+  calc();
+})();
+</script>
+</body>
+</html>
