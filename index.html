@@ -154,6 +154,7 @@
         <div class="btns" style="margin:0">
           <button class="ghost" id="reset" type="button" style="border-color:var(--line);color:var(--sub)">重置</button>
           <button id="copy" type="button">复制结果</button>
+          <button id="go" type="button">开始计算</button>
         </div>
       </div>
     </div>
@@ -162,7 +163,7 @@
   </div>
 
   <!-- 结果 -->
-  <div class="card">
+  <div class="card" id="res">
     <h2>计算结果</h2>
     <div class="hero">
       <div class="box primary">
@@ -331,6 +332,12 @@
 
   $('reset').addEventListener('click', function(){
     amt.value = ''; pay.value = ''; mon.value = ''; fee.value = 0; extra.value = 0; calc();
+  });
+
+  $('go').addEventListener('click', function(){
+    calc();
+    var r = $('res');
+    if (r && r.scrollIntoView) r.scrollIntoView({behavior:'smooth', block:'start'});
   });
 
   $('copy').addEventListener('click', function(){
